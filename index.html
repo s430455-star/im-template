@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>即時通客製化模板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@500;700;900&family=LXGW+WenKai+TC:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: light; --c-ink: #111111; --c-mut: #5A5A5A; --c-ac: #5B3DF5; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: #FFFFFF; color: var(--c-ink);
+    font-family: "Space Grotesk", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+  button, input { font-family: inherit; }
+  button { cursor: pointer; transition: transform .08s ease; }
+  button:active { transform: translate(1px, 1px); }
+  :focus-visible { outline: 3px solid var(--c-ac); outline-offset: 2px; }
+  ::placeholder { color: var(--c-mut); opacity: 1; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  .app { display: flex; min-height: 100vh; }
+  .panel { flex: none; width: 400px; padding: 28px; border-right: 2px solid var(--c-ink); display: flex; flex-direction: column; gap: 18px; }
+  .stage { flex: 1; min-width: 0; background: #E9E9E9; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 40px; padding: 40px 24px; }
+  @media (max-width: 900px) {
+    .app { flex-direction: column; }
+    .panel { width: 100%; border-right: none; border-bottom: 2px solid var(--c-ink); padding: 20px 16px; }
+    .stage { padding: 24px 16px; gap: 24px; }
+  }
+
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 3px; color: var(--c-mut); }
+  h1 { margin: 4px 0 0; font-size: 28px; line-height: 1.2; font-weight: 900; letter-spacing: -.5px; }
+  .lead { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--c-mut); font-weight: 500; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .label { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--c-mut); }
+  .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+  .presets { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .presets button { height: 44px; padding: 0; border: 2px solid var(--c-ink); background: #FFFFFF; color: var(--c-ink); font-size: 14px; font-weight: 900; }
+  .text { height: 48px; border: 2px solid var(--c-ink); background: none; color: var(--c-ink); padding: 0 12px; font-size: 18px; font-weight: 900; outline: none; caret-color: var(--c-ac); width: 100%; }
+  .text:focus-visible { outline: 3px solid var(--c-ac); outline-offset: 2px; }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .sw { width: 44px; height: 44px; padding: 0; border: 2px solid var(--c-ink); }
+  .sw[aria-pressed="true"] { outline: 3px solid var(--c-ink); outline-offset: 2px; }
+  .custom { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 10px 0 4px; border: 2px dashed var(--c-ink); font-size: 13px; font-weight: 700; cursor: pointer; }
+  .custom input { width: 32px; height: 32px; padding: 0; border: none; background: none; cursor: pointer; }
+  .custom.on { border-style: solid; outline: 3px solid var(--c-ink); outline-offset: 2px; }
+
+  .seg { display: flex; border: 2px solid var(--c-ink); }
+  .seg button { flex: 1; height: 44px; padding: 0; border: none; background: #FFFFFF; color: var(--c-ink); font-size: 14px; font-weight: 900; }
+  .seg button[aria-pressed="true"] { background: var(--c-ink); color: #FFFFFF; }
+
+  .spec { padding: 12px 14px; background: #F1F1F1; border: 1px solid var(--c-ink); font-size: 13px; font-weight: 500; line-height: 1.8; white-space: pre-line; word-break: break-all; }
+  .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .actions button { min-height: 46px; padding: 6px 8px; border: 2px solid var(--c-ink); background: #FFFFFF; color: var(--c-ink); font-size: 14px; font-weight: 900; }
+  .actions button.primary { background: var(--c-ac); color: #FFFFFF; box-shadow: 4px 4px 0 var(--c-ink); }
+  .status { min-height: 20px; margin: 0; font-size: 13px; font-weight: 700; color: var(--c-mut); }
+
+  /* preview phones: everything below reads the user's tokens */
+  .phone { width: 340px; max-width: 100%; height: 700px; border: 2px solid #111111; background: var(--bg); color: var(--ink); font-family: var(--ff); display: flex; flex-direction: column; overflow: hidden; }
+  .phone.chat { background: var(--soft); }
+  .p-head { display: flex; align-items: center; gap: 12px; padding: 22px 18px 14px; border-bottom: var(--bd); background: var(--bg); }
+  .p-logo { flex: none; width: 44px; height: 44px; border: var(--bd); border-radius: var(--r); background: var(--ac); color: var(--onac); box-shadow: var(--sh); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; }
+  .p-name { flex: 1; min-width: 0; font-size: 26px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .p-chip { flex: none; padding: 4px 10px; border-radius: var(--r); background: var(--hi); color: var(--onhi); font-size: 13px; font-weight: 900; }
+  .p-list { flex: 1; min-height: 0; overflow: hidden; }
+  .p-row { display: flex; align-items: center; gap: 12px; padding: 0 18px; min-height: 78px; border-bottom: 1px solid var(--line); }
+  .p-av { flex: none; width: 46px; height: 46px; border: var(--bd); border-radius: var(--avr); display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 900; background: var(--soft); color: var(--ink); }
+  .p-av.hi { background: var(--hi); color: var(--onhi); }
+  .p-av.ac { background: var(--ac); color: var(--onac); }
+  .p-av.ink { background: var(--ink); color: var(--bg); }
+  .p-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .p-mid b { font-size: 16px; font-weight: 900; }
+  .p-mid span { font-size: 13px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .p-end { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .p-end time { font-size: 11px; font-weight: 700; color: var(--mut); }
+  .p-badge { min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--r); background: var(--ink); color: var(--bg); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .p-badge.none { visibility: hidden; }
+  .p-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: var(--bd); }
+  .p-nav span { height: 56px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; }
+  .p-nav span.on { background: var(--hi); color: var(--onhi); font-weight: 900; }
+  .c-head { justify-content: space-between; padding: 20px 18px 14px; }
+  .c-who { display: flex; flex-direction: column; }
+  .c-who b { font-size: 20px; font-weight: 900; line-height: 1.3; }
+  .c-who span { font-size: 12px; font-weight: 700; color: var(--mut); }
+  .c-call { padding: 8px 14px; border: var(--bd); border-radius: var(--r); background: var(--hi); color: var(--onhi); font-size: 14px; font-weight: 900; }
+  .c-body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; padding: 16px 18px 18px; }
+  .msg { max-width: 84%; padding: 10px 14px; border: var(--bd); border-radius: var(--r); background: var(--bg); box-shadow: var(--sh); font-size: 15px; font-weight: 500; line-height: 1.55; align-self: flex-start; }
+  .msg.me { align-self: flex-end; background: var(--ac); color: var(--onac); }
+  .card { align-self: flex-end; width: 116px; height: 84px; border: var(--bd); border-radius: var(--r); background: var(--hi); color: var(--onhi); box-shadow: var(--sh); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; transform: rotate(-3deg); }
+  .c-foot { display: flex; align-items: center; gap: 10px; padding: 12px 14px 16px; background: var(--bg); border-top: var(--bd); }
+  .c-input { flex: 1; height: 46px; display: flex; align-items: center; padding: 0 14px; border: var(--bd); border-radius: var(--r); font-size: 15px; color: var(--mut); }
+  .c-send { flex: none; height: 46px; display: flex; align-items: center; padding: 0 18px; border: var(--bd); border-radius: var(--r); background: var(--ac); color: var(--onac); font-size: 15px; font-weight: 900; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="panel" aria-label="設定">
+    <div>
+      <span class="eyebrow">客製化模板</span>
+      <h1>做一個你自己的即時通</h1>
+      <p class="lead">調整左邊的設定，右邊的畫面會立刻跟著變。</p>
+    </div>
+
+    <div class="field">
+      <span class="label">從範本開始</span>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="field">
+      <label class="label" for="appname">名稱</label>
+      <input class="text" id="appname" type="text" maxlength="8" placeholder="取個名字" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <span class="label">主色</span>
+      <div class="swatches" id="accents">
+        <label class="custom" id="acCustomWrap"><input type="color" id="acCustom" aria-label="自訂主色">自訂</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="label">標記色</span>
+      <div class="swatches" id="marks">
+        <label class="custom" id="hiCustomWrap"><input type="color" id="hiCustom" aria-label="自訂標記色">自訂</label>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="field"><span class="label">圓角</span><div class="seg" id="radii"></div></div>
+      <div class="field"><span class="label">陰影</span><div class="seg" id="shadows"></div></div>
+      <div class="field"><span class="label">字體</span><div class="seg" id="fonts"></div></div>
+      <div class="field"><span class="label">明暗</span><div class="seg" id="modes"></div></div>
+    </div>
+
+    <div class="field">
+      <span class="label">你的設定</span>
+      <div class="spec" id="spec"></div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="btnLink" type="button">複製分享連結</button>
+      <button id="btnCopy" type="button">複製設定文字</button>
+      <button id="btnSave" type="button">下載設定檔</button>
+      <button id="btnReset" type="button">重設</button>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </aside>
+
+  <main class="stage" id="stage" aria-label="預覽">
+    <section class="phone" aria-label="對話列表預覽">
+      <div class="p-head">
+        <span class="p-logo" id="logo" aria-hidden="true">即</span>
+        <span class="p-name" id="pname">即時通</span>
+        <span class="p-chip">4 則未讀</span>
+      </div>
+      <div class="p-list">
+        <div class="p-row"><span class="p-av hi" aria-hidden="true">家</span><div class="p-mid"><b>家人群組</b><span>媽媽：晚上回來吃飯嗎？</span></div><div class="p-end"><time>18:42</time><span class="p-badge">3</span></div></div>
+        <div class="p-row"><span class="p-av ac" aria-hidden="true">林</span><div class="p-mid"><b>林雅婷</b><span>週六天氣比較好，早上十點見</span></div><div class="p-end"><time>18:20</time><span class="p-badge">1</span></div></div>
+        <div class="p-row"><span class="p-av" aria-hidden="true">設</span><div class="p-mid"><b>設計週會</b><span>阿哲：簡報我放好了</span></div><div class="p-end"><time>17:05</time><span class="p-badge none">0</span></div></div>
+        <div class="p-row"><span class="p-av ink" aria-hidden="true">陳</span><div class="p-mid"><b>陳柏翰</b><span>傳了一張相片</span></div><div class="p-end"><time>15:31</time><span class="p-badge none">0</span></div></div>
+        <div class="p-row"><span class="p-av" aria-hidden="true">張</span><div class="p-mid"><b>張家豪</b><span>我：收到，謝謝</span></div><div class="p-end"><time>週日</time><span class="p-badge none">0</span></div></div>
+      </div>
+      <div class="p-nav"><span class="on">對話</span><span>人</span><span>動態</span><span>我</span></div>
+    </section>
+
+    <section class="phone chat" aria-label="對話預覽">
+      <div class="p-head c-head">
+        <div class="c-who"><b>林雅婷</b><span>在線</span></div>
+        <span class="c-call">通話</span>
+      </div>
+      <div class="c-body">
+        <div class="msg">這週末要不要一起去爬山？</div>
+        <div class="msg me">好啊，週六還是週日？</div>
+        <div class="msg">週六天氣比較好，早上十點見</div>
+        <div class="card">出發</div>
+      </div>
+      <div class="c-foot"><span class="c-input">寫點什麼</span><span class="c-send">送出</span></div>
+    </section>
+  </main>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DEFAULTS = { name: '即時通', ac: '#5B3DF5', hi: '#FFE14A', radius: 0, shadow: 'hard', font: 'sans', dark: false };
+  var ACCENTS = [['#5B3DF5', '紫'], ['#1F5FD0', '藍'], ['#0F7B6C', '青綠'], ['#B84A00', '橘'], ['#C2255C', '桃紅'], ['#111111', '黑']];
+  var MARKS = [['#FFE14A', '黃'], ['#B8F5C8', '薄荷'], ['#FFC2D4', '粉'], ['#BDE3FF', '天藍']];
+  var RADII = [0, 8, 16, 24];
+  var SHADOWS = { hard: '硬', soft: '柔', none: '無' };
+  var FONTS = {
+    sans: ['黑體', '"Space Grotesk", "Noto Sans TC", "Microsoft JhengHei", sans-serif'],
+    serif: ['明體', '"Noto Serif TC", "PMingLiU", serif'],
+    kai: ['楷體', '"LXGW WenKai TC", "DFKai-SB", serif']
+  };
+  var PRESETS = [
+    ['原版', { ac: '#5B3DF5', hi: '#FFE14A', radius: 0, shadow: 'hard', font: 'sans', dark: false }],
+    ['柔和', { ac: '#0F7B6C', hi: '#B8F5C8', radius: 16, shadow: 'soft', font: 'sans', dark: false }],
+    ['報紙', { ac: '#111111', hi: '#FFE14A', radius: 0, shadow: 'none', font: 'serif', dark: false }],
+    ['手寫', { ac: '#1F5FD0', hi: '#BDE3FF', radius: 8, shadow: 'hard', font: 'kai', dark: false }],
+    ['夜貓', { ac: '#C2255C', hi: '#FFC2D4', radius: 24, shadow: 'soft', font: 'sans', dark: true }]
+  ];
+  var STORE_KEY = 'im-template-v1';
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- state: URL hash first (shared link), then this browser, then defaults ----------
+  function clean(raw) {
+    var s = {};
+    var hex = /^#[0-9a-fA-F]{6}$/;
+    s.name = typeof raw.name === 'string' ? raw.name.slice(0, 8) : DEFAULTS.name;
+    s.ac = hex.test(raw.ac) ? raw.ac.toUpperCase() : DEFAULTS.ac;
+    s.hi = hex.test(raw.hi) ? raw.hi.toUpperCase() : DEFAULTS.hi;
+    s.radius = RADII.indexOf(Number(raw.radius)) >= 0 ? Number(raw.radius) : DEFAULTS.radius;
+    s.shadow = SHADOWS[raw.shadow] ? raw.shadow : DEFAULTS.shadow;
+    s.font = FONTS[raw.font] ? raw.font : DEFAULTS.font;
+    s.dark = raw.dark === true || raw.dark === 'true' || raw.dark === '1';
+    return s;
+  }
+  function fromHash() {
+    if (!location.hash || location.hash.length < 2) return null;
+    try {
+      var p = new URLSearchParams(location.hash.slice(1));
+      if (!p.has('ac') && !p.has('name')) return null;
+      var raw = {};
+      p.forEach(function (v, k) { raw[k] = v; });
+      if (raw.ac) raw.ac = '#' + raw.ac.replace('#', '');
+      if (raw.hi) raw.hi = '#' + raw.hi.replace('#', '');
+      return clean(raw);
+    } catch (e) { return null; }
+  }
+  function fromStore() {
+    try {
+      var t = localStorage.getItem(STORE_KEY);
+      return t ? clean(JSON.parse(t)) : null;
+    } catch (e) { return null; }
+  }
+  function toHash(s) {
+    var p = new URLSearchParams();
+    p.set('name', s.name);
+    p.set('ac', s.ac.slice(1));
+    p.set('hi', s.hi.slice(1));
+    p.set('radius', String(s.radius));
+    p.set('shadow', s.shadow);
+    p.set('font', s.font);
+    p.set('dark', s.dark ? '1' : '0');
+    return '#' + p.toString();
+  }
+  var state = fromHash() || fromStore() || clean(DEFAULTS);
+
+  // ---------- colour helpers ----------
+  function lum(hex) {
+    var c = [1, 3, 5].map(function (i) {
+      var v = parseInt(hex.substr(i, 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function contrast(a, b) {
+    var x = lum(a), y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  }
+  // pick whichever of white / near-black reads better on this colour
+  function textOn(hex) { return contrast(hex, '#FFFFFF') >= contrast(hex, '#111111') ? '#FFFFFF' : '#111111'; }
+
+  // ---------- build controls once ----------
+  function button(parent, label, onClick, cls) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    if (cls) b.className = cls;
+    b.textContent = label;
+    b.addEventListener('click', onClick);
+    parent.appendChild(b);
+    return b;
+  }
+  function swatch(parent, before, hex, name, key) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sw';
+    b.style.background = hex;
+    b.setAttribute('aria-label', name);
+    b.dataset.hex = hex;
+    b.addEventListener('click', function () { set(key, hex); });
+    parent.insertBefore(b, before);
+  }
+  PRESETS.forEach(function (p) {
+    button($('presets'), p[0], function () {
+      Object.keys(p[1]).forEach(function (k) { state[k] = p[1][k]; });
+      render();
+    });
+  });
+  ACCENTS.forEach(function (a) { swatch($('accents'), $('acCustomWrap'), a[0], a[1], 'ac'); });
+  MARKS.forEach(function (a) { swatch($('marks'), $('hiCustomWrap'), a[0], a[1], 'hi'); });
+  RADII.forEach(function (n) { button($('radii'), String(n), function () { set('radius', n); }).dataset.v = String(n); });
+  Object.keys(SHADOWS).forEach(function (k) { button($('shadows'), SHADOWS[k], function () { set('shadow', k); }).dataset.v = k; });
+  Object.keys(FONTS).forEach(function (k) {
+    var b = button($('fonts'), FONTS[k][0], function () { set('font', k); });
+    b.dataset.v = k;
+    b.style.fontFamily = FONTS[k][1];
+  });
+  [[false, '淺色'], [true, '深色']].forEach(function (m) {
+    button($('modes'), m[1], function () { set('dark', m[0]); }).dataset.v = String(m[0]);
+  });
+
+  $('appname').addEventListener('input', function (e) { set('name', e.target.value.slice(0, 8)); });
+  $('acCustom').addEventListener('input', function (e) { set('ac', e.target.value.toUpperCase()); });
+  $('hiCustom').addEventListener('input', function (e) { set('hi', e.target.value.toUpperCase()); });
+
+  function set(key, value) {
+    state[key] = value;
+    render();
+  }
+
+  // ---------- render ----------
+  function specText() {
+    var shown = state.name.trim() || '未命名';
+    return [
+      '名稱：' + shown,
+      '主色：' + state.ac + '　標記色：' + state.hi,
+      '圓角：' + state.radius + 'px　陰影：' + SHADOWS[state.shadow],
+      '字體：' + FONTS[state.font][0] + '　明暗：' + (state.dark ? '深色' : '淺色')
+    ].join('\n');
+  }
+  function mark(container, attr, value) {
+    Array.prototype.forEach.call(container.querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset[attr] === value));
+    });
+  }
+  function render() {
+    var s = state;
+    var ink = s.dark ? '#F4F4F4' : '#111111';
+    var bg = s.dark ? '#151515' : '#FFFFFF';
+    var line = s.dark ? '#3A3A3A' : '#D9D9D9';
+    // an accent that vanishes into the page background gets swapped for the ink colour
+    var ac = contrast(s.ac, bg) < 1.5 ? ink : s.ac;
+    var st = $('stage').style;
+    st.setProperty('--bg', bg);
+    st.setProperty('--ink', ink);
+    st.setProperty('--mut', s.dark ? '#B5B5B5' : '#5A5A5A');
+    st.setProperty('--soft', s.dark ? '#242424' : '#F2F2F2');
+    st.setProperty('--line', line);
+    st.setProperty('--ac', ac);
+    st.setProperty('--onac', textOn(ac));
+    st.setProperty('--hi', s.hi);
+    st.setProperty('--onhi', textOn(s.hi));
+    st.setProperty('--r', s.radius + 'px');
+    st.setProperty('--avr', s.radius >= 16 ? '50%' : s.radius + 'px');
+    st.setProperty('--bd', s.shadow === 'hard' ? '2px solid ' + ink : '1px solid ' + line);
+    st.setProperty('--sh', s.shadow === 'hard' ? '4px 4px 0 ' + ink : s.shadow === 'soft' ? '0 6px 18px rgba(0,0,0,.16)' : 'none');
+    st.setProperty('--ff', FONTS[s.font][1]);
+
+    var shown = s.name.trim() || '未命名';
+    $('pname').textContent = shown;
+    $('logo').textContent = Array.from(shown)[0];
+    if ($('appname').value !== s.name) $('appname').value = s.name;
+    $('acCustom').value = s.ac.toLowerCase();
+    $('hiCustom').value = s.hi.toLowerCase();
+
+    mark($('accents'), 'hex', s.ac);
+    mark($('marks'), 'hex', s.hi);
+    $('acCustomWrap').classList.toggle('on', !ACCENTS.some(function (a) { return a[0] === s.ac; }));
+    $('hiCustomWrap').classList.toggle('on', !MARKS.some(function (a) { return a[0] === s.hi; }));
+    mark($('radii'), 'v', String(s.radius));
+    mark($('shadows'), 'v', s.shadow);
+    mark($('fonts'), 'v', s.font);
+    mark($('modes'), 'v', String(s.dark));
+
+    $('spec').textContent = specText();
+    document.title = shown + '｜即時通客製化模板';
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) { /* private mode: nothing to keep */ }
+    try { history.replaceState(null, '', toHash(s)); } catch (e) { /* some file:// contexts refuse; link button still works */ }
+  }
+
+  // ---------- actions ----------
+  var statusTimer;
+  function say(text) {
+    $('status').textContent = text;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(function () { $('status').textContent = ''; }, 4000);
+  }
+  function copy(text, okMessage) {
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      say(ok ? okMessage : '這個瀏覽器不允許自動複製，請手動選取上方文字。');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { say(okMessage); }, fallback);
+    } else {
+      fallback();
+    }
+  }
+  $('btnCopy').addEventListener('click', function () { copy(specText(), '設定文字已複製。'); });
+  $('btnLink').addEventListener('click', function () {
+    var url = location.href.split('#')[0] + toHash(state);
+    var local = location.protocol === 'file:';
+    copy(url, local ? '連結已複製。這是你電腦上的檔案路徑，放上網站後連結才能給別人用。' : '分享連結已複製，對方打開就會看到同一組設定。');
+  });
+  $('btnSave').addEventListener('click', function () {
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (state.name.trim() || '即時通') + '-設定.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    say('設定檔已下載。');
+  });
+  $('btnReset').addEventListener('click', function () {
+    state = clean(DEFAULTS);
+    render();
+    say('已回到原版設定。');
+  });
+  window.addEventListener('hashchange', function () {
+    var next = fromHash();
+    if (next) { state = next; render(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
